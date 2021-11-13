@@ -16,21 +16,26 @@ fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     for a in &args[1..] {
-        println!("Connecting to {}", a);
-        let mut stream = TcpStream::connect(a)?;
-        dbg!(&stream);
-        let packet = br#"{"foo": "bar"}"#;
-        loop {
-            stream.write_all(packet)?;
-            std::thread::sleep(std::time::Duration::from_secs(1));
-        }
+        let a = a.clone();
+        std::thread::spawn( move || {
+            println!("Connecting to {}", a);
+            let mut stream = TcpStream::connect(a).unwrap();
+            dbg!(&stream);
+            let packet = br#"{"foo": "bar"}"#;
+            loop {
+                stream.write_all(packet).unwrap();
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        });
     }
 
-    let listener = TcpListener::bind("0.0.0.0:8080")?;
+    let listener = TcpListener::bind("0.0.0.0:8000")?;
 
     // accept connections and process them serially
     for stream in listener.incoming() {
-        listen_to_connection(stream?);
+        std::thread::spawn( move || {
+            listen_to_connection(stream.unwrap());
+        });
     }
     Ok(())
 }
